@@ -24,12 +24,15 @@ func main() {
 	}
 	defer server.Close()
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 	for range ticker.C {
 		var packet forza.DataPacket
 		packet.Running = 1
 		packet.CurrentEngineRpm = float32(rand.Intn(5000) + 800)
+		packet.EngineIdleRpm = 800
+		packet.EngineMaxRpm = 5800
+
 		_, err := server.WriteTo(packet.ToBytes(), addr)
 		if err != nil {
 			fmt.Println(err.Error())
