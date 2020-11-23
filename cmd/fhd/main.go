@@ -13,13 +13,13 @@ import (
 func main() {
 	addr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:13337")
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
 	listener, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 	defer listener.Close()
@@ -27,6 +27,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
+	var packet forza.DataPacket
 	go func() {
 		fmt.Printf("listening...\n")
 		buffer := make([]byte, 1500)
@@ -35,16 +36,14 @@ func main() {
 		for {
 			_, _, err := listener.ReadFromUDP(buffer)
 			if err != nil {
-				fmt.Printf(err.Error())
+				fmt.Println(err.Error())
 			}
 
-			var packet forza.DataPacket
 			packet.FromBytes(buffer)
 			if packet.Running == 0 {
 				continue
 			}
 
-			//fmt.Printf("\rDAT: %X\n", buffer[:n])
 			fmt.Printf(
 				"\rID: %d (%s, PI: %d), Speed: %.2f, RPM: %.2f, Gear: %c",
 				packet.CarID, class[packet.CarClass], packet.CarPerformanceIndex,

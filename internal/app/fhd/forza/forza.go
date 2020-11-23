@@ -99,3 +99,10 @@ type DataPacket struct {
 func (p *DataPacket) FromBytes(data []byte) {
 	binary.Read(bytes.NewReader(data), binary.LittleEndian, p)
 }
+
+// ToBytes converts a packet to raw bytes.
+func (p *DataPacket) ToBytes() []byte {
+	var buffer bytes.Buffer
+	binary.Write(&buffer, binary.LittleEndian, *p)
+	return buffer.Bytes()
+}
