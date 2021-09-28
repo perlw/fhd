@@ -27,7 +27,7 @@ type DataPacket struct {
 	NormalizedSuspensionFrontLeft    float32 // 0.0 - relaxed, 1.0 - compressed.
 	NormalizedSuspensionFrontRight   float32
 	NormalizedSuspensionRearLeft     float32
-	NormalizedSuspensionReadRight    float32
+	NormalizedSuspensionRearRight    float32
 	TireSlipRatioFrontLeft           float32 // 0.0 - max grip, 1.0+ - no grip.
 	TireSlipRatioFrontRight          float32
 	TireSlipRatioRearLeft            float32
@@ -71,7 +71,7 @@ type DataPacket struct {
 	PositionZ                        float32
 	Speed                            float32 // Meters per second.
 	Power                            float32 // Watts.
-	Toque                            float32 // Newtonmeter.
+	Torque                           float32 // Newtonmeter.
 	TireTempFrontLeft                float32
 	TireTempFrontRight               float32
 	TireTempRearLeft                 float32
