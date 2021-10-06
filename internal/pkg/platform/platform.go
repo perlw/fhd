@@ -1,9 +1,5 @@
 package platform
 
-type SetUpFunc func()
-type TearDownFunc func()
-type UpdateAndRenderFunc func(backbuffer *BitmapBuffer)
-
 type BitmapBuffer struct {
 	Memory []uint32
 	Width  int
@@ -12,8 +8,12 @@ type BitmapBuffer struct {
 	Pitch  int
 }
 
+type App interface {
+	SetUp()
+	TearDown()
+	UpdateAndRender(backbuffer *BitmapBuffer)
+}
+
 type Platform struct {
-	SetUp           SetUpFunc
-	TearDown        TearDownFunc
-	UpdateAndRender UpdateAndRenderFunc
+	App App
 }

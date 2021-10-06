@@ -8,20 +8,22 @@ import (
 	"github.com/perlw/fhd/internal/pkg/platform"
 )
 
-func setUp() {
+type App struct {
+	delta float64
+}
+
+func (a *App) SetUp() {
 	fmt.Println("SetUp")
 }
 
-func tearDown() {
+func (a *App) TearDown() {
 	fmt.Println("TearDown")
 }
 
-var delta float64
-
-func updateAndRender(backbuffer *platform.BitmapBuffer) {
-	delta += 0.01
-	zoom := 1 + math.Sin(delta*0.1)
-	xmod, ymod := math.Sincos(delta)
+func (a *App) UpdateAndRender(backbuffer *platform.BitmapBuffer) {
+	a.delta += 0.01
+	zoom := 1 + math.Sin(a.delta*0.1)
+	xmod, ymod := math.Sincos(a.delta)
 
 	for y := 0; y < backbuffer.Height; y++ {
 		i := y * backbuffer.Width
@@ -39,9 +41,7 @@ func main() {
 	runtime.LockOSThread()
 
 	p := platform.Platform{
-		SetUp:           setUp,
-		TearDown:        tearDown,
-		UpdateAndRender: updateAndRender,
+		App: &App{},
 	}
 	p.Main()
 }

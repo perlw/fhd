@@ -10,7 +10,7 @@ import (
 
 /*
 #cgo CFLAGS:-std=c99
-#cgo LDFLAGS: -luser32 -lgdi32
+#cgo LDFLAGS:-Wl,--allow-multiple-definition -luser32 -lgdi32
 #include "win32.h"
 */
 import "C"
@@ -128,7 +128,7 @@ func (p *Platform) Main() {
 
 	resizeDIBSection(&globalBackbuffer, 1280, 720)
 
-	p.SetUp()
+	p.App.SetUp()
 
 	globalIsRunning = true
 	for globalIsRunning {
@@ -164,7 +164,7 @@ func (p *Platform) Main() {
 			Bps:    globalBackbuffer.bps,
 			Pitch:  globalBackbuffer.pitch,
 		}
-		p.UpdateAndRender(&backbuffer)
+		p.App.UpdateAndRender(&backbuffer)
 
 		var clientRect C.RECT
 		C.GetClientRect(window, &clientRect)
@@ -172,7 +172,7 @@ func (p *Platform) Main() {
 		blitBufferInWindow(&globalBackbuffer, dc, int(clientRect.right-clientRect.left), int(clientRect.bottom-clientRect.top))
 	}
 
-	p.TearDown()
+	p.App.TearDown()
 
 	C.DestroyWindow(window)
 }

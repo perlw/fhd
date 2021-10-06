@@ -100,7 +100,7 @@ func (p *Platform) Main() {
 
 	shmCompletionEvent := int16(C.xcb_get_extension_data(connection, &C.xcb_shm_id).first_event + C.XCB_SHM_COMPLETION)
 
-	p.SetUp()
+	p.App.SetUp()
 
 	isRunning := true
 	readyToBlit := true
@@ -168,7 +168,7 @@ func (p *Platform) Main() {
 			Bps:    currentBackbuffer.bps,
 			Pitch:  currentBackbuffer.pitch,
 		}
-		p.UpdateAndRender(&backbuffer)
+		p.App.UpdateAndRender(&backbuffer)
 
 		if readyToBlit {
 			readyToBlit = false
@@ -182,7 +182,7 @@ func (p *Platform) Main() {
 		}
 	}
 
-	p.TearDown()
+	p.App.TearDown()
 
 	C.xcb_shm_detach(connection, backbuffers[0].shmSeg)
 	C.shmctl(backbuffers[0].shmID, C.IPC_RMID, nil)
