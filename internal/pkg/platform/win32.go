@@ -10,8 +10,7 @@ import (
 
 /*
 #cgo CFLAGS:-std=c99
-#cgo LDFLAGS: -Wl,--allow-multiple-definition
-#cgo windows LDFLAGS: -luser32 -lgdi32
+#cgo LDFLAGS: -luser32 -lgdi32
 #include "win32.h"
 */
 import "C"
