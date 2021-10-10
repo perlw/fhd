@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/perlw/fhd/internal/app/fhd/forza"
+	"github.com/perlw/fhd/internal/pkg/forzaprotocol"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 		theta += 0.1
 		fVal := float32(math.Abs(math.Sin(theta)))
 
-		var packet forza.DataPacket
+		var packet forzaprotocol.Packet
 
 		packet.Running = 1
 		packet.CarPerformanceIndex = 999

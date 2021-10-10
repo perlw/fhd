@@ -24,8 +24,23 @@ type backbufferInfo struct {
 	pitch      int
 }
 
+func (b backbufferInfo) ToBitmapBuffer() *BitmapBuffer {
+	sliceHdr := reflect.SliceHeader{
+		Data: uintptr(b.memory),
+		Len:  b.bps * (b.width * b.height),
+	}
+	sliceHdr.Cap = sliceHdr.Len
+
+	return &BitmapBuffer{
+		Memory: *(*[]uint32)(unsafe.Pointer(&sliceHdr)),
+		Width:  b.width,
+		Height: b.height,
+		Bps:    b.bps,
+		Pitch:  b.pitch,
+	}
+}
+
 var globalIsRunning bool
-var globalBackbuffer backbufferInfo
 
 func resizeDIBSection(backbuffer *backbufferInfo, width, height int) {
 	if backbuffer.memory != nil {
@@ -79,16 +94,6 @@ func WindowProc(window C.HWND, message C.UINT, wParam C.WPARAM, lParam C.LPARAM)
 	case C.WM_ACTIVATEAPP:
 		fmt.Println("WM_ACTIVATEAPP")
 
-	case C.WM_PAINT:
-		fmt.Println("WM_PAINT")
-
-		var paint C.PAINTSTRUCT
-		dc := C.BeginPaint(window, &paint)
-		var clientRect C.RECT
-		C.GetClientRect(window, &clientRect)
-		blitBufferInWindow(&globalBackbuffer, dc, int(clientRect.right-clientRect.left), int(clientRect.bottom-clientRect.top))
-		C.EndPaint(window, &paint)
-
 	default:
 		result = C.DefWindowProc(window, message, wParam, lParam)
 	}
@@ -126,7 +131,8 @@ func (p *Platform) Main() {
 		fmt.Println("could not create window")
 	}
 
-	resizeDIBSection(&globalBackbuffer, 1280, 720)
+	var backbuffer backbufferInfo
+	resizeDIBSection(&backbuffer, 1280, 720)
 
 	p.App.SetUp()
 
@@ -151,25 +157,12 @@ func (p *Platform) Main() {
 			}
 		}
 
-		sliceHdr := reflect.SliceHeader{
-			Data: uintptr(globalBackbuffer.memory),
-			Len:  globalBackbuffer.bps * (globalBackbuffer.width * globalBackbuffer.height),
-		}
-		sliceHdr.Cap = sliceHdr.Len
-
-		backbuffer := BitmapBuffer{
-			Memory: *(*[]uint32)(unsafe.Pointer(&sliceHdr)),
-			Width:  globalBackbuffer.width,
-			Height: globalBackbuffer.height,
-			Bps:    globalBackbuffer.bps,
-			Pitch:  globalBackbuffer.pitch,
-		}
-		p.App.UpdateAndRender(&backbuffer)
+		p.App.UpdateAndRender(backbuffer.ToBitmapBuffer())
 
 		var clientRect C.RECT
 		C.GetClientRect(window, &clientRect)
 		dc := C.GetDC(window)
-		blitBufferInWindow(&globalBackbuffer, dc, int(clientRect.right-clientRect.left), int(clientRect.bottom-clientRect.top))
+		blitBufferInWindow(&backbuffer, dc, int(clientRect.right-clientRect.left), int(clientRect.bottom-clientRect.top))
 	}
 
 	p.App.TearDown()

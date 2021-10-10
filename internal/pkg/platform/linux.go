@@ -161,14 +161,14 @@ func (p *Platform) Main() {
 			Len:  currentBackbuffer.bps * (currentBackbuffer.width * currentBackbuffer.height),
 		}
 		sliceHdr.Cap = sliceHdr.Len
-		backbuffer := BitmapBuffer{
+		bitmapBuffer := BitmapBuffer{
 			Memory: *(*[]uint32)(unsafe.Pointer(&sliceHdr)),
 			Width:  currentBackbuffer.width,
 			Height: currentBackbuffer.height,
 			Bps:    currentBackbuffer.bps,
 			Pitch:  currentBackbuffer.pitch,
 		}
-		p.App.UpdateAndRender(&backbuffer)
+		p.App.UpdateAndRender(&bitmapBuffer)
 
 		if readyToBlit {
 			readyToBlit = false

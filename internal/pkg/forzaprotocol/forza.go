@@ -1,12 +1,12 @@
-package forza
+package forzaprotocol
 
 import (
 	"bytes"
 	"encoding/binary"
 )
 
-// DataPacket represents a single packet from the UDP dataport.
-type DataPacket struct {
+// Packet represents a single packet from the UDP dataport.
+type Packet struct {
 	Running                          int32 // 0 in menus, 1 when not.
 	Timestamp                        uint32
 	EngineMaxRpm                     float32
@@ -96,12 +96,12 @@ type DataPacket struct {
 }
 
 // FromBytes converts a raw packet into this struct.
-func (p *DataPacket) FromBytes(data []byte) {
+func (p *Packet) FromBytes(data []byte) {
 	binary.Read(bytes.NewReader(data), binary.LittleEndian, p)
 }
 
 // ToBytes converts a packet to raw bytes.
-func (p *DataPacket) ToBytes() []byte {
+func (p *Packet) ToBytes() []byte {
 	var buffer bytes.Buffer
 	binary.Write(&buffer, binary.LittleEndian, *p)
 	return buffer.Bytes()

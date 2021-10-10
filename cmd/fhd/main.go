@@ -10,10 +10,10 @@ import (
 	"github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 
-	"github.com/perlw/fhd/internal/app/fhd/forza"
+	"github.com/perlw/fhd/internal/pkg/forzaprotocol"
 )
 
-func listen(packet chan<- forza.DataPacket) {
+func listen(packet chan<- forzaprotocol.Packet) {
 	addr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:13337")
 	if err != nil {
 		fmt.Println(err.Error())
@@ -34,7 +34,7 @@ func listen(packet chan<- forza.DataPacket) {
 			fmt.Println(err.Error())
 		}
 
-		var dp forza.DataPacket
+		var dp forzaprotocol.Packet
 		dp.FromBytes(buffer)
 		if dp.Running == 0 {
 			continue
@@ -92,7 +92,7 @@ func main() {
 
 	class := []string{"D", "C", "B", "A", "S1", "S2", "R", "X"}
 	gear := []rune{'R', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
-	packet := make(chan forza.DataPacket)
+	packet := make(chan forzaprotocol.Packet)
 	go listen(packet)
 
 	var end bool
