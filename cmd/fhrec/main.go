@@ -49,17 +49,19 @@ func main() {
 
 	fmt.Printf("Recording packets from %s to file %s...\n", listenAddr, filename)
 
-	var count int
+	var numPackets int
+	var numBytes int
 quit:
 	for {
 		select {
 		case packet := <-dataChan:
 			c, _ := file.Write(packet.ToBytes())
-			count += c
+			numBytes += c
+			numPackets++
 		case <-stopChan:
 			break quit
 		}
 	}
 
-	fmt.Printf("Recorded %.2fkbytes to %s!", float64(count)/1024, filename)
+	fmt.Printf("Recorded %.2fkbytes (%d packets) to %s!", float64(numBytes)/1024, numPackets, filename)
 }

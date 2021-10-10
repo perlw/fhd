@@ -50,7 +50,7 @@ func main() {
 	}
 	defer server.Close()
 
-	ticker := time.NewTicker(time.Millisecond * 10)
+	ticker := time.NewTicker(time.Millisecond * 16)
 	defer ticker.Stop()
 
 	var stopChan = make(chan os.Signal, 2)

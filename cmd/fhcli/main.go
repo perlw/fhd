@@ -20,7 +20,7 @@ func main() {
 
 	infoBar := widgets.NewParagraph()
 	infoBar.Text = "ID: 0 (-, PI: 0), Speed: 0.00, RPM: 0.00, Gear: -, Distance: 0.00"
-	infoBar.SetRect(0, 0, 60, 3)
+	infoBar.SetRect(0, 0, 80, 3)
 	rpmGauge := widgets.NewGauge()
 	rpmGauge.Title = "RPM"
 	rpmGauge.SetRect(0, 3, 20, 6)
@@ -70,13 +70,18 @@ func main() {
 		}
 	}()
 
-	var end bool
 	uiEvents := termui.PollEvents()
 	var stopChan = make(chan os.Signal, 2)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-	for !end {
+
+quit:
+	for {
 		select {
 		case p := <-packet:
+			if p.Running == 0 {
+				break
+			}
+
 			text := fmt.Sprintf(
 				"ID: %d (%s, PI: %d), Speed: %.2f, RPM: %.2f, Gear: %c, Distance: %.2f",
 				p.CarID, class[p.CarClass], p.CarPerformanceIndex,
@@ -104,13 +109,13 @@ func main() {
 
 		case e := <-uiEvents:
 			if e.Type == termui.KeyboardEvent {
-				end = true
+				break quit
 			}
 
 		case <-stopChan:
-			end = true
-
-		default:
+			break quit
 		}
 	}
+
+	fmt.Println("Bye!")
 }
