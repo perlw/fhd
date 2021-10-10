@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,37 +11,6 @@ import (
 
 	"github.com/perlw/fhd/internal/pkg/forzaprotocol"
 )
-
-func listen(packet chan<- forzaprotocol.Packet) {
-	addr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:13337")
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	listener, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	defer listener.Close()
-
-	buffer := make([]byte, 1500)
-	for {
-		_, _, err := listener.ReadFromUDP(buffer)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-
-		var dp forzaprotocol.Packet
-		dp.FromBytes(buffer)
-		if dp.Running == 0 {
-			continue
-		}
-
-		packet <- dp
-	}
-}
 
 func main() {
 	if err := termui.Init(); err != nil {
@@ -92,13 +60,20 @@ func main() {
 
 	class := []string{"D", "C", "B", "A", "S1", "S2", "R", "X"}
 	gear := []rune{'R', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
+
 	packet := make(chan forzaprotocol.Packet)
-	go listen(packet)
+	var listener forzaprotocol.Listener
+	go func() {
+		if err := listener.Listen("0.0.0.0:13337", packet); err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+	}()
 
 	var end bool
 	uiEvents := termui.PollEvents()
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	var stopChan = make(chan os.Signal, 2)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	for !end {
 		select {
 		case p := <-packet:
@@ -132,7 +107,7 @@ func main() {
 				end = true
 			}
 
-		case <-stop:
+		case <-stopChan:
 			end = true
 
 		default:

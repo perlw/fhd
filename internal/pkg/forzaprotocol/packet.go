@@ -5,6 +5,9 @@ import (
 	"encoding/binary"
 )
 
+// NOTE: unsafe.Sizeof returns a packet size of 324, which is wrong. Not sure why as of yet.
+var PacketSize = 323 // unsafe.Sizeof(Packet{})
+
 // Packet represents a single packet from the UDP dataport.
 type Packet struct {
 	Running                          int32 // 0 in menus, 1 when not.
