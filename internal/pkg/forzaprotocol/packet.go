@@ -69,9 +69,9 @@ type Packet struct {
 	Drivetrain                       int32 // 0: FWD, 1: RWD, 2: AWD.
 	NumCylinders                     int32
 	Unknown                          [12]byte
-	PositionX                        float32
-	PositionY                        float32
-	PositionZ                        float32
+	PositionX                        float32 // Meters.
+	PositionY                        float32 // Meters.
+	PositionZ                        float32 // Meters.
 	Speed                            float32 // Meters per second.
 	Power                            float32 // Watts.
 	Torque                           float32 // Newtonmeter.

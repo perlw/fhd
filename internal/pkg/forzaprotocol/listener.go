@@ -20,7 +20,7 @@ func (l *Listener) Listen(address string, dataChan chan<- Packet) error {
 	}
 	defer listener.Close()
 
-	buffer := make([]byte, PacketSize)
+	buffer := make([]byte, 1024)
 	for {
 		_, _, err := listener.ReadFromUDP(buffer)
 		if err != nil {
