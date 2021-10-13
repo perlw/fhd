@@ -18,16 +18,16 @@ import "C"
 type backbufferInfo struct {
 	bitmapInfo C.BITMAPINFO
 	memory     unsafe.Pointer
-	width      int
-	height     int
-	bps        int
-	pitch      int
+	width      int32
+	height     int32
+	bps        int32
+	pitch      int32
 }
 
 func (b backbufferInfo) ToBitmapBuffer() *BitmapBuffer {
 	sliceHdr := reflect.SliceHeader{
 		Data: uintptr(b.memory),
-		Len:  b.bps * (b.width * b.height),
+		Len:  int(b.width * b.height),
 	}
 	sliceHdr.Cap = sliceHdr.Len
 
@@ -42,7 +42,7 @@ func (b backbufferInfo) ToBitmapBuffer() *BitmapBuffer {
 
 var globalIsRunning bool
 
-func resizeDIBSection(backbuffer *backbufferInfo, width, height int) {
+func resizeDIBSection(backbuffer *backbufferInfo, width, height int32) {
 	if backbuffer.memory != nil {
 		C.VirtualFree(C.LPVOID(backbuffer.memory), 0, C.MEM_RELEASE)
 	}
@@ -65,9 +65,9 @@ func resizeDIBSection(backbuffer *backbufferInfo, width, height int) {
 	backbuffer.memory = unsafe.Pointer(C.VirtualAlloc(nil, memorySize, C.MEM_RESERVE|C.MEM_COMMIT, C.PAGE_READWRITE))
 }
 
-func blitBufferInWindow(backbuffer *backbufferInfo, dc C.HDC, width, height int) {
+func blitBufferInWindow(backbuffer *backbufferInfo, dc C.HDC, width, height int32) {
 	var check float32 = 16.0 / 9.0
-	correctedWidth := int(float32(height) * check)
+	correctedWidth := int32(float32(height) * check)
 	offsetX := (width - correctedWidth) / 2
 	if correctedWidth != width {
 		C.PatBlt(dc, 0, 0, C.int(offsetX), C.int(height), C.BLACKNESS)
@@ -162,7 +162,7 @@ func (p *Platform) Main() {
 		var clientRect C.RECT
 		C.GetClientRect(window, &clientRect)
 		dc := C.GetDC(window)
-		blitBufferInWindow(&backbuffer, dc, int(clientRect.right-clientRect.left), int(clientRect.bottom-clientRect.top))
+		blitBufferInWindow(&backbuffer, dc, int32(clientRect.right-clientRect.left), int32(clientRect.bottom-clientRect.top))
 	}
 
 	p.App.TearDown()

@@ -9,35 +9,12 @@ import (
 	"github.com/perlw/fhd/internal/pkg/platform"
 )
 
-func abs(a int) int {
-	if a < 0 {
-		return -a
-	}
-	return a
+func abs(a int32) int32 {
+	v := a >> 31
+	return (a + v) ^ v
 }
 
-/*
-   plotLine(int x0, int y0, int x1, int y1)
-   dx =  abs(x1-x0);
-   sx = x0<x1 ? 1 : -1;
-   dy = -abs(y1-y0);
-   sy = y0<y1 ? 1 : -1;
-   err = dx+dy;  // error value e_xy
-   while (true)   // loop
-       plot(x0, y0);
-       if (x0 == x1 && y0 == y1) break;
-       e2 = 2*err;
-       if (e2 >= dy) // e_xy+e_x > 0
-           err += dy;
-           x0 += sx;
-       end if
-       if (e2 <= dx) // e_xy+e_y < 0
-           err += dx;
-           y0 += sy;
-       end if
-   end while
-*/
-func clamp(a, min, max int) int {
+func clamp(a, min, max int32) int32 {
 	if a < min {
 		return min
 	} else if a > max {
@@ -46,8 +23,12 @@ func clamp(a, min, max int) int {
 	return a
 }
 
-func drawLine(backbuffer *platform.BitmapBuffer, x1, y1, x2, y2 int) {
-	var sx, sy, dx, dy int
+func lerp(start, stop int32, t float32) int32 {
+	return int32(((1 - t) * float32(start)) + (t * float32(stop)) + 0.5)
+}
+
+func drawLine(backbuffer *platform.BitmapBuffer, x1, y1, x2, y2 int32, color uint32) {
+	var sx, sy, dx, dy int32
 
 	x1 = clamp(x1, 0, backbuffer.Width-1)
 	y1 = clamp(y1, 0, backbuffer.Height-1)
@@ -71,7 +52,7 @@ func drawLine(backbuffer *platform.BitmapBuffer, x1, y1, x2, y2 int) {
 	y := y1
 	e := dx + dy
 	for {
-		backbuffer.Memory[(y*backbuffer.Width)+x] = 0xffffffff
+		backbuffer.Memory[(y*backbuffer.Width)+x] = color
 		if x == x2 && y == y2 {
 			break
 		}
@@ -90,6 +71,9 @@ func drawLine(backbuffer *platform.BitmapBuffer, x1, y1, x2, y2 int) {
 
 type App struct {
 	PosX, PosZ float32
+	Gas, Brake float32
+	Laps       uint16
+	CurrentLap uint16
 }
 
 func (a *App) SetUp() {
@@ -101,14 +85,41 @@ func (a *App) TearDown() {
 }
 
 func (a *App) UpdateAndRender(backbuffer *platform.BitmapBuffer) {
-	drawLine(backbuffer, 640, 0, 640, 720)
-	drawLine(backbuffer, 0, 360, 1280, 360)
-	drawLine(backbuffer, 0, 0, 1280, 720)
-	drawLine(backbuffer, 0, 720, 1280, 0)
+	if a.Laps != a.CurrentLap {
+		a.Laps = a.CurrentLap
+		for i, c := range backbuffer.Memory {
+			r := ((c >> 16) & 0xff) >> 2
+			g := ((c >> 8) & 0xff) >> 2
+			b := ((c >> 0) & 0xff) >> 2
+			backbuffer.Memory[i] = (0xff << 24) + (r << 16) + (g << 8) + (b << 0)
+		}
+	}
 
-	x := (a.PosX / 5200) * 256
-	y := -(a.PosZ / 5200) * 256
-	backbuffer.Memory[(int(y+360)*backbuffer.Width)+int(x+640)] = 0xffff0000
+	drawLine(backbuffer, 640, 0, 640, 720, 0xff333333)
+	drawLine(backbuffer, 0, 360, 1280, 360, 0xff333333)
+	drawLine(backbuffer, 0, 0, 1280, 720, 0xff333333)
+	drawLine(backbuffer, 0, 720, 1280, 0, 0xff333333)
+
+	drawLine(backbuffer, 384, 104, 896, 104, 0xffffffff)
+	drawLine(backbuffer, 896, 104, 896, 616, 0xffffffff)
+	drawLine(backbuffer, 896, 616, 384, 616, 0xffffffff)
+	drawLine(backbuffer, 384, 104, 384, 616, 0xffffffff)
+
+	viewTLX, viewTLZ := -1000, -5300
+	viewBRX, viewBRZ := 200, -6500
+	viewWidth, viewHeight := viewBRX-viewTLX, viewTLZ-viewBRZ
+	modPosX, modPosZ := float32(a.PosX-float32(viewTLX))/float32(viewWidth), float32(a.PosZ-float32(viewBRZ))/float32(viewHeight)
+
+	if modPosX >= 0 && modPosX <= 1 && modPosZ >= 0 && modPosZ <= 1 {
+		x := ((modPosX * 2) - 1) * 256
+		y := ((-modPosZ * 2) + 1) * 256
+
+		r := uint32(lerp(96, 255, a.Brake))
+		g := uint32(lerp(96, 255, a.Gas))
+		b := uint32(96)
+
+		backbuffer.Memory[(int32(y+360)*backbuffer.Width)+int32(x+640)] = (0xff << 24) + (r << 16) + (g << 8) + (b << 0)
+	}
 }
 
 func main() {
@@ -128,6 +139,9 @@ func main() {
 		for packet := range dataChan {
 			app.PosX = packet.PositionX
 			app.PosZ = packet.PositionZ
+			app.Gas = float32(packet.Accel) / 255
+			app.Brake = float32(packet.Brake) / 255
+			app.CurrentLap = packet.LapNumber
 		}
 	}()
 
