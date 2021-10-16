@@ -25,13 +25,13 @@ type backbufferInfo struct {
 	pixmapID C.xcb_pixmap_t
 
 	memory unsafe.Pointer
-	width  int
-	height int
-	bps    int
-	pitch  int
+	width  int32
+	height int32
+	bps    int32
+	pitch  int32
 }
 
-func resizeBackbuffer(backbuffer *backbufferInfo, connection *C.xcb_connection_t, window C.xcb_drawable_t, width, height int) {
+func resizeBackbuffer(backbuffer *backbufferInfo, connection *C.xcb_connection_t, window C.xcb_drawable_t, width, height int32) {
 	if backbuffer.shmID != 0 {
 		C.xcb_shm_detach(connection, backbuffer.shmSeg)
 		C.shmctl(backbuffer.shmID, C.IPC_RMID, nil)
@@ -158,7 +158,7 @@ func (p *Platform) Main() {
 
 		sliceHdr := reflect.SliceHeader{
 			Data: uintptr(currentBackbuffer.memory),
-			Len:  currentBackbuffer.bps * (currentBackbuffer.width * currentBackbuffer.height),
+			Len:  int(currentBackbuffer.bps * (currentBackbuffer.width * currentBackbuffer.height)),
 		}
 		sliceHdr.Cap = sliceHdr.Len
 		bitmapBuffer := BitmapBuffer{
