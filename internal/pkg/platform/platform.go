@@ -1,5 +1,7 @@
 package platform
 
+import "unsafe"
+
 type BitmapBuffer struct {
 	Memory []uint32
 	Width  int32
@@ -8,10 +10,15 @@ type BitmapBuffer struct {
 	Pitch  int32
 }
 
+type Memory struct {
+	PermanentSize    uint64
+	PermanentStorage unsafe.Pointer
+}
+
 type App interface {
-	SetUp()
+	SetUp(memory *Memory)
 	TearDown()
-	UpdateAndRender(backbuffer *BitmapBuffer)
+	UpdateAndRender(memory *Memory, backbuffer *BitmapBuffer, elapsedMs float64)
 }
 
 type Platform struct {

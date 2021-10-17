@@ -5,12 +5,13 @@ package platform
 import (
 	"fmt"
 	"reflect"
+	"time"
 	"unsafe"
 )
 
 /*
 #cgo CFLAGS:-std=c99
-#cgo LDFLAGS:-Wl,--allow-multiple-definition -luser32 -lgdi32
+#cgo LDFLAGS:-Wl,--allow-multiple-definition -luser32 -lgdi32 -lwinmm
 #include "win32.h"
 */
 import "C"
@@ -40,7 +41,12 @@ func (b backbufferInfo) ToBitmapBuffer() *BitmapBuffer {
 	}
 }
 
+type windowDimensions struct {
+	width, height int
+}
+
 var globalIsRunning bool
+var globalPerfCountFrequency int64
 
 func resizeDIBSection(backbuffer *backbufferInfo, width, height int32) {
 	if backbuffer.memory != nil {
@@ -78,6 +84,15 @@ func blitBufferInWindow(backbuffer *backbufferInfo, dc C.HDC, width, height int3
 		&backbuffer.bitmapInfo, C.DIB_RGB_COLORS, C.SRCCOPY)
 }
 
+func getWindowDimensions(window C.HWND) windowDimensions {
+	var clientRect C.RECT
+	C.GetClientRect(window, &clientRect)
+	return windowDimensions{
+		width:  int(clientRect.right - clientRect.left),
+		height: int(clientRect.bottom - clientRect.top),
+	}
+}
+
 //export WindowProc
 func WindowProc(window C.HWND, message C.UINT, wParam C.WPARAM, lParam C.LPARAM) C.LRESULT {
 	var result C.LRESULT = 0
@@ -102,6 +117,10 @@ func WindowProc(window C.HWND, message C.UINT, wParam C.WPARAM, lParam C.LPARAM)
 }
 
 func (p *Platform) Main() {
+	C.Win32SetGlobalPerfFrequency()
+	sleepIsGranular := (C.Win32SetSleepGranular() != 0)
+	fmt.Printf("granular sleep? %v\n", sleepIsGranular)
+
 	className := C.CString("fhdwin32platform")
 	hInstance := C.GetModuleHandle(nil)
 	windowClass := C.WNDCLASSA{
@@ -134,9 +153,21 @@ func (p *Platform) Main() {
 	var backbuffer backbufferInfo
 	resizeDIBSection(&backbuffer, 1280, 720)
 
-	p.App.SetUp()
+	var updateHz float64 = 30.0
+	targetSecondsPerFrame := 1.0 / updateHz
+
+	memory := Memory{
+		PermanentSize: 256 * (1024 * 1024),
+	}
+	// TODO: Debug check.
+	baseAddress := C.LPVOID(uintptr(2 * (1024 * 1024 * 1024)))
+	memory.PermanentStorage = unsafe.Pointer(C.VirtualAlloc(baseAddress, C.ulonglong(memory.PermanentSize), C.MEM_RESERVE|C.MEM_COMMIT, C.PAGE_READWRITE))
+
+	p.App.SetUp(&memory)
 
 	globalIsRunning = true
+	var msPerFrame float64
+	lastCounter := C.Win32GetClockValue()
 	for globalIsRunning {
 		var message C.MSG
 		for C.PeekMessage(&message, window, 0, 0, C.PM_REMOVE) != 0 {
@@ -157,12 +188,25 @@ func (p *Platform) Main() {
 			}
 		}
 
-		p.App.UpdateAndRender(backbuffer.ToBitmapBuffer())
+		p.App.UpdateAndRender(&memory, backbuffer.ToBitmapBuffer(), msPerFrame)
 
-		var clientRect C.RECT
-		C.GetClientRect(window, &clientRect)
+		secondsElapsedPerFrame := float64(C.Win32GetSecondsElapsed(lastCounter, C.Win32GetClockValue()))
+		if secondsElapsedPerFrame < targetSecondsPerFrame {
+			sleepMs := 1000 * (targetSecondsPerFrame - secondsElapsedPerFrame)
+			if sleepIsGranular {
+				C.Sleep(C.ulong(sleepMs))
+			} else {
+				time.Sleep(time.Duration(sleepMs * float64(time.Millisecond)))
+			}
+		}
+
+		endCounter := C.Win32GetClockValue()
+		msPerFrame = 1000 * float64(C.Win32GetSecondsElapsed(lastCounter, endCounter))
+		lastCounter = endCounter
+
+		dimensions := getWindowDimensions(window)
 		dc := C.GetDC(window)
-		blitBufferInWindow(&backbuffer, dc, int32(clientRect.right-clientRect.left), int32(clientRect.bottom-clientRect.top))
+		blitBufferInWindow(&backbuffer, dc, int32(dimensions.width), int32(dimensions.height))
 	}
 
 	p.App.TearDown()

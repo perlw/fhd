@@ -76,15 +76,28 @@ type App struct {
 	CurrentLap uint16
 }
 
-func (a *App) SetUp() {
-	fmt.Println("SetUp")
+type State struct {
+	AccelMinShade, AccelMaxShade int32
+	BrakeMinShade, BrakeMaxShade int32
+}
+
+func (a *App) SetUp(memory *platform.Memory) {
+	state := (*State)(memory.PermanentStorage)
+	state.AccelMinShade = 96
+	state.AccelMaxShade = 255
+	state.BrakeMinShade = 96
+	state.BrakeMaxShade = 255
 }
 
 func (a *App) TearDown() {
-	fmt.Println("TearDown")
+	fmt.Println("Bye")
 }
 
-func (a *App) UpdateAndRender(backbuffer *platform.BitmapBuffer) {
+func (a *App) UpdateAndRender(memory *platform.Memory, backbuffer *platform.BitmapBuffer, elapsedMs float64) {
+	fmt.Printf("elapsed: %f\n", elapsedMs)
+
+	state := (*State)(memory.PermanentStorage)
+
 	if a.Laps != a.CurrentLap {
 		a.Laps = a.CurrentLap
 		for i, c := range backbuffer.Memory {
@@ -105,17 +118,17 @@ func (a *App) UpdateAndRender(backbuffer *platform.BitmapBuffer) {
 	drawLine(backbuffer, 896, 616, 384, 616, 0xffffffff)
 	drawLine(backbuffer, 384, 104, 384, 616, 0xffffffff)
 
-	viewTLX, viewTLZ := -1000, -5300
-	viewBRX, viewBRZ := 200, -6500
+	var viewTLX, viewTLZ float32 = -1000, -5300
+	var viewBRX, viewBRZ float32 = 200, -6500
 	viewWidth, viewHeight := viewBRX-viewTLX, viewTLZ-viewBRZ
-	modPosX, modPosZ := float32(a.PosX-float32(viewTLX))/float32(viewWidth), float32(a.PosZ-float32(viewBRZ))/float32(viewHeight)
+	modPosX, modPosZ := (a.PosX-viewTLX)/float32(viewWidth), (a.PosZ-viewBRZ)/float32(viewHeight)
 
 	if modPosX >= 0 && modPosX <= 1 && modPosZ >= 0 && modPosZ <= 1 {
 		x := ((modPosX * 2) - 1) * 256
 		y := ((-modPosZ * 2) + 1) * 256
 
-		r := uint32(lerp(96, 255, a.Brake))
-		g := uint32(lerp(96, 255, a.Gas))
+		r := uint32(lerp(state.AccelMinShade, state.AccelMaxShade, a.Brake))
+		g := uint32(lerp(state.BrakeMinShade, state.BrakeMaxShade, a.Gas))
 		b := uint32(96)
 
 		backbuffer.Memory[(int32(y+360)*backbuffer.Width)+int32(x+640)] = (0xff << 24) + (r << 16) + (g << 8) + (b << 0)
